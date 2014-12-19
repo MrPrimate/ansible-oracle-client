@@ -2,7 +2,7 @@
 # This role conains tasks to deploy the Oracle Instant Client
 
 - name: installation files check
-  shell: ls /Users/darek/Documents/edt/ansible/files/instantclient-*.zip
+  local_action: shell ls roles/oracle-client/files/instantclient-*.zip
   connection: local
   sudo: false
   register: ls_inst_files
@@ -13,6 +13,16 @@
   fail: msg="Oracle Instant Client installation files missing"
   when: ls_inst_files.stdout == ""
   tags: check
+
+- name: ensure oracle group exists
+  group: name={{ _oracle_client.group }} state=present gid={{ _oracle_client.group_id }}
+  sudo: yes
+  tags: install
+
+- name: ensure oracel user exists
+  user: name={{ _oracle_client.user }} groups={{ _oracle_client.group }} uid={{ _oracle_client.user_id }}
+  sudo: yes
+  tags: install
 
 - name: creating base directory
   file: path={{ oracle_client_base }} state=directory owner={{ _oracle_client.user }} group={{ _oracle_client.group }}
@@ -30,8 +40,40 @@
   changed_when: false
   tags: install
 
+- name: ensure EPEL and PIP are installed, as well as required packages for cx_oracle compile
+  yum:
+    name={{ item }}
+    state=present
+  sudo: yes
+  with_items:
+    - epel-release
+    - python-pip
+    - libaio
+    - bc
+    - flex
+    - python-devel
+  when: ansible_os_family == 'RedHat' and install_cx_Oracle
+  tags: install
+
+- name: Create symlink to for clishared object
+  file: src={{ ls_oracle_home.stdout }}/libclntsh.so.11.1 dest={{ ls_oracle_home.stdout }}/libclntsh.so state=link
+  when: ansible_os_family == 'RedHat' and install_cx_Oracle
+  tags: install
+
 - name: installing cx_Oracle
   pip: name=cx_Oracle state=latest
+  sudo: yes
   environment:
     ORACLE_HOME: "{{ ls_oracle_home.stdout }}"
+    LD_LIBRARY_PATH: "{{ ls_oracle_home.stdout }}"
+  when: install_cx_Oracle
   tags: install
+
+# configure tnsnames.ora
+
+- name: create tnsnames.ora folder
+  file: path={{ ls_oracle_home.stdout }}/network/admin state=directory 
+
+- name: write the tnsnames.ora config file
+  template: src=tnsnames.j2 dest={{ ls_oracle_home.stdout }}/network/admin/tnsnames.ora
+

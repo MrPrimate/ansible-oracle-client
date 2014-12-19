@@ -4,6 +4,13 @@
 # installation base directory
 oracle_client_base: /opt/oracle
 
+# install cx_Oracle
+install_cx_Oracle: true
+
+# tnsname.ora entries
+tns_names:
+  - { name: "XE", hostname: "localhost", port: 1521, service_name: "XE" }
+
 ### Constants
 
 _oracle_client:

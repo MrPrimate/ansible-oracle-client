@@ -1,0 +1,14 @@
+
+{% for tnsentry in tns_names %}
+
+{{ tnsentry.name }} =
+  (DESCRIPTION =
+    (ADDRESS = (PROTOCOL = TCP)(HOST = {{ tnsentry.hostname }})(PORT = {{tnsentry.port}} ))
+    (CONNECT_DATA =
+      (SERVER = DEDICATED)
+      (SERVICE_NAME = {{ tnsentry.service_name }} )
+    )
+  )
+
+{% endfor %}
+
